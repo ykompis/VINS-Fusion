@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 find_package(catkin REQUIRED COMPONENTS
     camera_models
+    ceres_catkin
     cv_bridge
     nav_msgs
     roscpp
@@ -16,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
     vins_msgs
     )
 
-find_package(OpenCV)
+find_package(OpenCV 3 REQUIRED)
 
 
 find_package(Ceres REQUIRED)
@@ -26,7 +27,7 @@ find_package(Eigen3)
 
 include_directories(${catkin_INCLUDE_DIRS} ${CERES_INCLUDE_DIRS}  ${EIGEN3_INCLUDE_DIR})
 
-catkin_package()
+catkin_package(CATKIN_DEPENDS ceres_catkin vins_msgs)
 
 add_executable(loop_fusion_node
     src/pose_graph_node.cpp
