@@ -31,7 +31,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-catkin_package()
+catkin_package(CATKIN_DEPENDS vins_msgs)
 
 add_library(vins_lib
     src/estimator/parameters.cpp
