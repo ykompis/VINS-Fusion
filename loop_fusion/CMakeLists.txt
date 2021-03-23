@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 find_package(catkin REQUIRED COMPONENTS
     camera_models
     ceres_catkin
+    covins_comm
     cv_bridge
     nav_msgs
     roscpp
@@ -25,9 +26,13 @@ find_package(Ceres REQUIRED)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3)
 
-include_directories(${catkin_INCLUDE_DIRS} ${CERES_INCLUDE_DIRS}  ${EIGEN3_INCLUDE_DIR})
+include_directories(
+    ${catkin_INCLUDE_DIRS}
+    ${CERES_INCLUDE_DIRS}
+    ${covins_comm_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIR})
 
-catkin_package(CATKIN_DEPENDS ceres_catkin vins_msgs)
+catkin_package(CATKIN_DEPENDS ceres_catkin covins_comm vins_msgs)
 
 add_executable(loop_fusion_node
     src/pose_graph_node.cpp
@@ -45,4 +50,8 @@ add_executable(loop_fusion_node
     src/ThirdParty/VocabularyBinary.cpp
     )
 
-target_link_libraries(loop_fusion_node ${catkin_LIBRARIES}  ${OpenCV_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(loop_fusion_node
+    ${catkin_LIBRARIES}
+    ${CERES_LIBRARIES}
+    ${covins_comm_LIBRARIES}
+    ${OpenCV_LIBS})
