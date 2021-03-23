@@ -4,13 +4,13 @@
 imu: 1
 num_of_cam: 2  # 1 or 2
 
-imu_topic: "/firefly/vi_sensor/imu"
-image0_topic: "/firefly/rect/first/image"
-image1_topic: "/firefly/rect/second/image"
+imu_topic: "/neo/vi_sensor/imu"
+image0_topic: "/neo/rect/first/image"
+image1_topic: "/neo/rect/second/image"
 output_path: "/home/yves/Documents/Data/"
 
-cam0_calib: "vulkan_cam.yaml"
-cam1_calib: "vulkan_cam.yaml"
+cam0_calib: "neo_cam_0.yaml"
+cam1_calib: "neo_cam_1.yaml"
 image_width: 752
 image_height: 480
 
@@ -25,12 +25,10 @@ body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-# Forward looking camera, pitch of 0 deg
 #   data: [0, 0, 1, 0.015,
 #          -1, 0, 0, 0.055,
 #          0, -1, 0, 0.0065,
 #          0, 0, 0, 1]
-# Forward and down looking camera, pitch of 20 deg
    data: [0, -0.3419960, 0.9397014, 0.015,
           -1, 0, 0, 0.055,
           0, -0.9397014, -0.3419960, 0.0065,
@@ -39,7 +37,6 @@ body_T_cam0: !!opencv-matrix
 #	R: 	 0, -sin(pitch),  cos(pitch)
 #		-1,	      0,           0
 #		 0, -cos(pitch), -sin(pitch)
-
 
 #cam1 to body
 body_T_cam1: !!opencv-matrix
