@@ -1,14 +1,14 @@
 /*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- * 
+ *
  * This file is part of VINS.
- * 
+ *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *******************************************************/
 
 #pragma once
- 
+
 #include <thread>
 #include <mutex>
 #include <std_msgs/Header.h>
@@ -66,14 +66,14 @@ class Estimator
     void vector2double();
     void double2vector();
     bool failureDetection();
-    bool getIMUInterval(double t0, double t1, vector<pair<double, Eigen::Vector3d>> &accVector, 
+    bool getIMUInterval(double t0, double t1, vector<pair<double, Eigen::Vector3d>> &accVector,
                                               vector<pair<double, Eigen::Vector3d>> &gyrVector);
     void getPoseInWorldFrame(Eigen::Matrix4d &T);
     void getPoseInWorldFrame(int index, Eigen::Matrix4d &T);
     void predictPtsInNextFrame();
     void outliersRejection(set<int> &removeIndex);
     double reprojectionError(Matrix3d &Ri, Vector3d &Pi, Matrix3d &rici, Vector3d &tici,
-                                     Matrix3d &Rj, Vector3d &Pj, Matrix3d &ricj, Vector3d &ticj, 
+                                     Matrix3d &Rj, Vector3d &Pj, Matrix3d &ricj, Vector3d &ticj,
                                      double depth, Vector3d &uvi, Vector3d &uvj);
     void updateLatestStates();
     void fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity);
@@ -126,6 +126,12 @@ class Estimator
 
     IntegrationBase *pre_integrations[(WINDOW_SIZE + 1)];
     Vector3d acc_0, gyr_0;
+
+    // COVINS integration
+    Vector3d init_acc[(WINDOW_SIZE + 1)];
+    Vector3d init_gyr[(WINDOW_SIZE + 1)];
+    // ------------------
+
 
     vector<double> dt_buf[(WINDOW_SIZE + 1)];
     vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)];
