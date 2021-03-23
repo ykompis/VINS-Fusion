@@ -1,8 +1,8 @@
 /*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- * 
+ *
  * This file is part of VINS.
- * 
+ *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
@@ -24,7 +24,14 @@ static void reduceVector(vector<Derived> &v, vector<uchar> status)
 // create keyframe online
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, cv::Mat &_image,
 		           vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv, vector<cv::Point2f> &_point_2d_norm,
-		           vector<double> &_point_id, int _sequence)
+                   vector<double> &_point_id, int _sequence
+                   // CoVINS integration
+                   , vins_msgs::preintegration_msg::ConstPtr imu_msg_ptr
+                   // ------------------
+                   )
+// CoVINS integration
+    : imu_msg(*imu_msg_ptr)
+// ------------------
 {
 	time_stamp = _time_stamp;
 	index = _index;
@@ -32,7 +39,7 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 	vio_R_w_i = _vio_R_w_i;
 	T_w_i = vio_T_w_i;
 	R_w_i = vio_R_w_i;
-	origin_vio_T = vio_T_w_i;		
+	origin_vio_T = vio_T_w_i;
 	origin_vio_R = vio_R_w_i;
 	image = _image.clone();
 	cv::resize(image, thumbnail, cv::Size(80, 60));
@@ -284,7 +291,7 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 
 	TicToc t_match;
 	#if 0
-		if (DEBUG_IMAGE)    
+		if (DEBUG_IMAGE)
 	    {
 	        cv::Mat gray_img, loop_match_img;
 	        cv::Mat old_img = old_kf->image;
@@ -318,7 +325,7 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	reduceVector(matched_id, status);
 	//printf("search by des finish\n");
 
-	#if 0 
+	#if 0
 		if (DEBUG_IMAGE)
 	    {
 			int gap = 10;
@@ -359,9 +366,9 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	        path2 <<  "/home/tony-ws1/raw_data/loop_image/"
 	                << index << "-"
 	                << old_kf->index << "-" << "1descriptor_match_2.jpg";
-	        cv::imwrite( path2.str().c_str(), old_img);	        
+	        cv::imwrite( path2.str().c_str(), old_img);
 	        */
-	        
+
 	    }
 	#endif
 	status.clear();
@@ -467,8 +474,8 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	            if ((int)matched_2d_cur.size() > MIN_LOOP_NUM)
 	            {
 	            	/*
-	            	cv::imshow("loop connection",loop_match_img);  
-	            	cv::waitKey(10);  
+	            	cv::imshow("loop connection",loop_match_img);
+	            	cv::waitKey(10);
 	            	*/
 	            	cv::Mat thumbimage;
 	            	cv::resize(loop_match_img, thumbimage, cv::Size(loop_match_img.cols / 2, loop_match_img.rows / 2));
@@ -582,5 +589,3 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 
   m_brief.importPairs(x1, y1, x2, y2);
 }
-
-

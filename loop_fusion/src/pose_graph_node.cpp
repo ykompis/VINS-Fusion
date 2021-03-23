@@ -1,8 +1,8 @@
-/*******************************************************
+_/*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- * 
+ *
  * This file is part of VINS.
- * 
+ *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
@@ -32,6 +32,11 @@
 #include "pose_graph.h"
 #include "utility/CameraPoseVisualization.h"
 #include "parameters.h"
+
+// CoVINS integration
+#include "vins_msgs/preintegration_msg.h"
+// ------------------
+
 #define SKIP_FIRST_CNT 10
 using namespace std;
 
@@ -39,6 +44,11 @@ queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<sensor_msgs::PointCloudConstPtr> point_buf;
 queue<nav_msgs::Odometry::ConstPtr> pose_buf;
 queue<Eigen::Vector3d> odometry_buf;
+
+// CoVINS integration
+queue<vins_msgs::preintegration_msgConstPtr> imu_buf;
+// ------------------
+
 std::mutex m_buf;
 std::mutex m_process;
 int frame_index  = 0;
@@ -94,8 +104,24 @@ void new_sequence()
         pose_buf.pop();
     while(!odometry_buf.empty())
         odometry_buf.pop();
+
+    // CoVINS integration
+    while(!imu_buf.empty())
+        imu_buf.pop();
+    // ------------------
+
     m_buf.unlock();
 }
+
+// CoVINS integration
+void imu_callback(const vins_msgs::preintegration_msg::ConstPtr &msg) {
+   m_buf.lock();
+//    std::cout << "received IMU data" << std::endl;
+    imu_buf.push(msg);
+    m_buf.unlock();
+}
+// ------------------
+
 
 void image_callback(const sensor_msgs::ImageConstPtr &image_msg)
 {
@@ -125,7 +151,7 @@ void point_callback(const sensor_msgs::PointCloudConstPtr &point_msg)
     /*
     for (unsigned int i = 0; i < point_msg->points.size(); i++)
     {
-        printf("%d, 3D point: %f, %f, %f 2D point %f, %f \n",i , point_msg->points[i].x, 
+        printf("%d, 3D point: %f, %f, %f 2D point %f, %f \n",i , point_msg->points[i].x,
                                                      point_msg->points[i].y,
                                                      point_msg->points[i].z,
                                                      point_msg->channels[i].values[0],
@@ -220,7 +246,7 @@ void vio_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     Vector3d vio_t_cam;
     Quaterniond vio_q_cam;
     vio_t_cam = vio_t + vio_q * tic;
-    vio_q_cam = vio_q * qic;        
+    vio_q_cam = vio_q * qic;
 
     cameraposevisual.reset();
     cameraposevisual.add_pose(vio_t_cam, vio_q_cam);
@@ -250,6 +276,10 @@ void process()
         sensor_msgs::PointCloudConstPtr point_msg = NULL;
         nav_msgs::Odometry::ConstPtr pose_msg = NULL;
 
+        // CoVINS integration
+        vins_msgs::preintegration_msg::ConstPtr imu_msg = NULL;
+        // ------------------
+
         // find out the messages with same time stamp
         m_buf.lock();
         if(!image_buf.empty() && !point_buf.empty() && !pose_buf.empty())
@@ -264,13 +294,34 @@ void process()
                 point_buf.pop();
                 printf("throw point at beginning\n");
             }
-            else if (image_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec() 
-                && point_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec())
+
+            // CoVINS integration
+            else if (image_buf.front()->header.stamp.toSec() > imu_buf.front()->header.stamp.toSec())
+            {
+                imu_buf.pop();
+                printf("throw IMU at beginning\n");
+            }
+            // ------------------
+
+            else if (image_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec()
+                && point_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec()
+                // CoVINS integration
+                && imu_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec()
+                // ------------------
+                )
             {
                 pose_msg = pose_buf.front();
                 pose_buf.pop();
                 while (!pose_buf.empty())
                     pose_buf.pop();
+
+                // CoVINS integration
+                while (imu_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec())
+                    imu_buf.pop();
+                imu_msg = imu_buf.front();
+                imu_buf.pop();
+                // ------------------
+
                 while (image_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec())
                     image_buf.pop();
                 image_msg = image_buf.front();
@@ -321,7 +372,7 @@ void process()
             }
             else
                 ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::MONO8);
-            
+
             cv::Mat image = ptr->image;
             // build keyframe
             Vector3d T = Vector3d(pose_msg->pose.pose.position.x,
@@ -333,8 +384,8 @@ void process()
                                      pose_msg->pose.pose.orientation.z).toRotationMatrix();
             if((T - last_t).norm() > SKIP_DIS)
             {
-                vector<cv::Point3f> point_3d; 
-                vector<cv::Point2f> point_2d_uv; 
+                vector<cv::Point3f> point_3d;
+                vector<cv::Point2f> point_2d_uv;
                 vector<cv::Point2f> point_2d_normal;
                 vector<double> point_id;
 
@@ -361,10 +412,17 @@ void process()
                 }
 
                 KeyFrame* keyframe = new KeyFrame(pose_msg->header.stamp.toSec(), frame_index, T, R, image,
-                                   point_3d, point_2d_uv, point_2d_normal, point_id, sequence);   
+                                   point_3d, point_2d_uv, point_2d_normal, point_id, sequence
+                                   // CoVINS integration
+                                   , imu_msg
+                                   // ------------------
+                                   );
                 m_process.lock();
                 start_flag = 1;
-                posegraph.addKeyFrame(keyframe, 1);
+                // CoVINS integration
+//                posegraph.addKeyFrame(keyframe, 1);
+                posegraph.addKeyFrame(keyframe, 0);
+                // ------------------
                 m_process.unlock();
                 frame_index++;
                 last_t = T;
@@ -402,7 +460,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "loop_fusion");
     ros::NodeHandle n("~");
     posegraph.registerPub(n);
-    
+
     VISUALIZATION_SHIFT_X = 0;
     VISUALIZATION_SHIFT_Y = 0;
     SKIP_CNT = 0;
@@ -415,7 +473,7 @@ int main(int argc, char **argv)
                "/home/tony-ws1/catkin_ws/src/VINS-Fusion/config/euroc/euroc_stereo_imu_config.yaml \n");
         return 0;
     }
-    
+
     string config_file = argv[1];
     printf("config_file: %s\n", argv[1]);
 
@@ -449,7 +507,7 @@ int main(int argc, char **argv)
     printf("cam calib path: %s\n", cam0Path.c_str());
     m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(cam0Path.c_str());
 
-    fsSettings["image0_topic"] >> IMAGE_TOPIC;        
+    fsSettings["image0_topic"] >> IMAGE_TOPIC;
     fsSettings["pose_graph_save_path"] >> POSE_GRAPH_SAVE_PATH;
     fsSettings["output_path"] >> VINS_RESULT_PATH;
     fsSettings["save_image"] >> DEBUG_IMAGE;
@@ -490,13 +548,16 @@ int main(int argc, char **argv)
     pub_point_cloud = n.advertise<sensor_msgs::PointCloud>("point_cloud_loop_rect", 1000);
     pub_margin_cloud = n.advertise<sensor_msgs::PointCloud>("margin_cloud_loop_rect", 1000);
     pub_odometry_rect = n.advertise<nav_msgs::Odometry>("odometry_rect", 1000);
+    // CoVINS integration
+    ros::Subscriber sub_imu = n.subscribe("/vins_estimator/keyframe_imu", 2000, imu_callback);
+    // ------------------
 
     std::thread measurement_process;
     std::thread keyboard_command_process;
 
     measurement_process = std::thread(process);
     keyboard_command_process = std::thread(command);
-    
+
     ros::spin();
 
     return 0;
