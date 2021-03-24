@@ -4,9 +4,9 @@
 imu: 1
 num_of_cam: 2  # 1 or 2
 
-imu_topic: "/neo/vi_sensor/imu"
-image0_topic: "/neo/rect/first/image"
-image1_topic: "/neo/rect/second/image"
+imu_topic: "/pegasus/imu0"
+image0_topic: "/pegasus/cam0/image_raw"
+image1_topic: "/pegasus/cam1/image_raw"
 output_path: "/home/yves/Documents/Data/"
 
 cam0_calib: "neo_cam_0.yaml"
@@ -29,9 +29,9 @@ body_T_cam0: !!opencv-matrix
 #          -1, 0, 0, 0.055,
 #          0, -1, 0, 0.0065,
 #          0, 0, 0, 1]
-   data: [0, -0.3419960, 0.9397014, 0.015,
-          -1, 0, 0, 0.055,
-          0, -0.9397014, -0.3419960, 0.0065,
+   data: [0.9999949463669013, 0.0025381792428195754, 0.0019143894037612023, -0.03948765512484276,
+          -0.0025395649002026275, 0.9999965148530137, 0.0007217284418940898, 0.014816317776519324,
+          -0.0019125508556825732, -0.0007265865106784595, 0.9999979071084433, 0.003980141583944678,
           0, 0, 0, 1]
 
 #	R: 	 0, -sin(pitch),  cos(pitch)
@@ -47,16 +47,16 @@ body_T_cam1: !!opencv-matrix
 #          -1, 0, 0, -0.055,
 #          0, -1, 0, 0.0065,
 #          0, 0, 0, 1]
-   data: [0, -0.3419960, 0.9397014, 0.015,
-          -1, 0, 0, -0.055,
-          0, -0.9397014, -0.3419960, 0.0065,
+   data: [0.9999761813246912, 0.004609375281106548, -0.005137162914129585, 0.07042515941002853,
+          -0.004587229215920821, 0.9999801713149754, 0.004314429857269417, 0.015224678012900712,
+          0.005156947877280407, -0.004290761749458864, 0.9999774973729162, 0.0046649713170978085,
           0, 0, 0, 1]
 
 #Multiple thread support
 multiple_thread: 1
 
 #feature traker paprameters
-max_cnt: 150            # max feature number in feature tracking
+max_cnt: 130            # max feature number in feature tracking
 min_dist: 30            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
 F_threshold: 1.0        # ransac threshold (pixel)
@@ -64,16 +64,16 @@ show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
 #optimization parameters
-max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.025  # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance
-acc_n: 0.2          # accelerometer measurement noise standard deviation. #0.2
-gyr_n: 0.02         # gyroscope measurement noise standard deviation.     #0.05
-acc_w: 0.0002         # accelerometer bias random work noise standard deviation.  #0.02
-gyr_w: 2.0e-5       # gyroscope bias random work noise standard deviation.     #4.0e-5
-g_norm: 9.805     # gravity magnitude
+acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2
+gyr_n: 0.01         # gyroscope measurement noise standard deviation.     #0.05
+acc_w: 0.001         # accelerometer bias random work noise standard deviation.  #0.02
+gyr_w: 0.0001       # gyroscope bias random work noise standard deviation.     #4.0e-5
+g_norm: 9.81007     # gravity magnitude
 
 #unsynchronization parameters
 estimate_td: 0                      # online estimate time offset between camera and imu
