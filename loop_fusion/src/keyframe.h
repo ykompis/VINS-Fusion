@@ -26,6 +26,7 @@
 
 // CoVINS integration
 #include "vins_msgs/preintegration_msg.h"
+#include "comm_interface/communicator.hpp"
 // ------------------
 
 
@@ -57,10 +58,11 @@ public:
              // ------------------
              );
 
-
 	KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, Vector3d &_T_w_i, Matrix3d &_R_w_i,
 			 cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
-			 vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors);
+             vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors
+             );
+
 	bool findConnection(KeyFrame* old_kf);
 	void computeWindowBRIEFPoint();
 	void computeBRIEFPoint();
@@ -125,7 +127,13 @@ public:
 	Eigen::Matrix<double, 8, 1 > loop_info;
 
     // CoVINS integration
+    virtual void ConvertToMsg(covins::MsgKeyframe &msg,
+                             KeyFrame* kf_ref, int client_id, bool is_update);
+    virtual void ConvertToMsg(covins::MsgLandmark &msg, int landmark_idx,
+                             KeyFrame* kf_ref, int client_id, bool is_update);
+
     const vins_msgs::preintegration_msg imu_msg;
+    virtual void Geo2Eigen(geometry_msgs::Vector3 &vgeo, Vector3d &veigen);
     // ------------------
 
 };

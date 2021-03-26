@@ -30,7 +30,9 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${CERES_INCLUDE_DIRS}
     ${covins_comm_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIR})
+    ${EIGEN3_INCLUDE_DIR}
+    ${PROJECT_SOURCE_DIR}/src/ThirdParty/
+    )
 
 catkin_package(CATKIN_DEPENDS ceres_catkin covins_comm vins_msgs)
 
@@ -48,6 +50,7 @@ add_executable(loop_fusion_node
     src/ThirdParty/DUtils/Timestamp.cpp
     src/ThirdParty/DVision/BRIEF.cpp
     src/ThirdParty/VocabularyBinary.cpp
+    src/comm_interface/communicator.cpp
     )
 
 target_link_libraries(loop_fusion_node

@@ -1,4 +1,4 @@
-_/*******************************************************
+/*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
  *
  * This file is part of VINS.
@@ -112,16 +112,6 @@ void new_sequence()
 
     m_buf.unlock();
 }
-
-// CoVINS integration
-void imu_callback(const vins_msgs::preintegration_msg::ConstPtr &msg) {
-   m_buf.lock();
-//    std::cout << "received IMU data" << std::endl;
-    imu_buf.push(msg);
-    m_buf.unlock();
-}
-// ------------------
-
 
 void image_callback(const sensor_msgs::ImageConstPtr &image_msg)
 {
@@ -268,6 +258,16 @@ void extrinsic_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     m_process.unlock();
 }
 
+// CoVINS integration
+void imu_callback(const vins_msgs::preintegration_msg::ConstPtr &msg) {
+    m_buf.lock();
+//    std::cout << "received IMU data" << std::endl;
+    imu_buf.push(msg);
+    m_buf.unlock();
+}
+// ------------------
+
+
 void process()
 {
     while (true)
@@ -275,14 +275,17 @@ void process()
         sensor_msgs::ImageConstPtr image_msg = NULL;
         sensor_msgs::PointCloudConstPtr point_msg = NULL;
         nav_msgs::Odometry::ConstPtr pose_msg = NULL;
-
         // CoVINS integration
         vins_msgs::preintegration_msg::ConstPtr imu_msg = NULL;
         // ------------------
 
+
         // find out the messages with same time stamp
         m_buf.lock();
-        if(!image_buf.empty() && !point_buf.empty() && !pose_buf.empty())
+        // CoVINS integration
+//        if(!image_buf.empty() && !point_buf.empty() && !pose_buf.empty())
+        if(!image_buf.empty() && !point_buf.empty() && !pose_buf.empty() && !imu_buf.empty())
+        // ------------------
         {
             if (image_buf.front()->header.stamp.toSec() > pose_buf.front()->header.stamp.toSec())
             {
@@ -417,12 +420,15 @@ void process()
                                    , imu_msg
                                    // ------------------
                                    );
+
                 m_process.lock();
                 start_flag = 1;
+
                 // CoVINS integration
 //                posegraph.addKeyFrame(keyframe, 1);
                 posegraph.addKeyFrame(keyframe, 0);
                 // ------------------
+
                 m_process.unlock();
                 frame_index++;
                 last_t = T;
@@ -548,6 +554,7 @@ int main(int argc, char **argv)
     pub_point_cloud = n.advertise<sensor_msgs::PointCloud>("point_cloud_loop_rect", 1000);
     pub_margin_cloud = n.advertise<sensor_msgs::PointCloud>("margin_cloud_loop_rect", 1000);
     pub_odometry_rect = n.advertise<nav_msgs::Odometry>("odometry_rect", 1000);
+
     // CoVINS integration
     ros::Subscriber sub_imu = n.subscribe("/vins_estimator/keyframe_imu", 2000, imu_callback);
     // ------------------

@@ -60,8 +60,8 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 
 // load previous keyframe
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, Vector3d &_T_w_i, Matrix3d &_R_w_i,
-					cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
-					vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors)
+                   cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
+                   vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors)
 {
 	time_stamp = _time_stamp;
 	index = _index;
@@ -589,3 +589,201 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 
   m_brief.importPairs(x1, y1, x2, y2);
 }
+
+
+// CoVINS integration
+void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int client_id, bool is_update) {
+    msg.is_update_msg = is_update;
+
+    msg.id.first = this->index;
+    msg.id.second = client_id;
+    msg.timestamp = this->time_stamp;
+
+    // Calibration - Cam
+    covins::TypeDefs::TransformType T_sc = covins::TypeDefs::TransformType::Identity();
+    T_sc.block<3,3>(0,0) = qic;
+    T_sc.block<3,1>(0,3) = tic;
+
+
+
+    msg.calibration.T_SC = T_sc;
+    msg.calibration.cam_model = covins::eCamModel::PINHOLE;
+    msg.calibration.dist_model = covins::eDistortionModel::RADTAN;
+
+    std::vector<covins::TypeDefs::precision_t> cam_params;
+    m_camera->writeParameters(cam_params); //EuRoC: k1 k2 p1 p2 fx fy cx cy
+
+    covins::TypeDefs::precision_t fx = cam_params[4];
+    covins::TypeDefs::precision_t fy = cam_params[5];
+    covins::TypeDefs::precision_t cx = cam_params[6];
+    covins::TypeDefs::precision_t cy = cam_params[7];
+    covins::TypeDefs::precision_t k1 = cam_params[0];
+    covins::TypeDefs::precision_t k2 = cam_params[1];
+    covins::TypeDefs::precision_t p1 = cam_params[2];
+    covins::TypeDefs::precision_t p2 = cam_params[3];
+    covins::TypeDefs::DynamicVectorType dist_coeffs;
+    dist_coeffs.resize(4);
+    dist_coeffs << k1,k2,p1,p2;
+
+    covins::VICalibration calib(T_sc,covins::eCamModel::PINHOLE,covins::eDistortionModel::RADTAN,
+                                        dist_coeffs,
+                                        m_camera->imageWidth(),m_camera->imageHeight(),
+                                        fx,fy,cx,cy,
+                                        0.0,0.0,
+                                        imu_msg.sigma_ac,imu_msg.sigma_gc,
+                                        0.0,0.0,
+                                        imu_msg.sigma_awc,imu_msg.sigma_gwc,
+                                        0.0,
+                                        imu_msg.g,
+                                        Vector3d::Zero(),
+                                        0,
+                                        imu_msg.td,
+                                        0.0
+                                        );
+    msg.calibration = calib;
+
+    msg.img_dim_x_min = 0.0;
+    msg.img_dim_y_min = 0.0;
+    msg.img_dim_x_max = COL;
+    msg.img_dim_y_max = ROW;
+
+    msg.keypoints_aors.reserve(point_3d.size());
+    msg.keypoints_distorted.reserve(point_3d.size());
+    msg.keypoints_undistorted.reserve(point_3d.size());
+    msg.descriptors.reserve(point_3d.size());
+
+//    std::cout << "point_id.size(): " << point_id.size() << std::endl;
+//    std::cout << "point_3d.size(): " << point_3d.size() << std::endl;
+//    std::cout << "keypoints.size(): " << keypoints.size() << std::endl;
+//    std::cout << "point_2d_uv.size(): " << point_2d_uv.size() << std::endl;
+//    std::cout << "brief_descriptors.size(): " << brief_descriptors.size() << std::endl;
+//    std::cout << "window_keypoints.size(): " << window_keypoints.size() << std::endl;
+//    std::cout << "window_brief_descriptors.size(): " << window_brief_descriptors.size() << std::endl;
+
+    for(size_t i=0;i<window_keypoints.size();++i) {
+        covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
+        aors << window_keypoints[i].angle, static_cast<float>(window_keypoints[i].octave), window_keypoints[i].response, window_keypoints[i].size;
+
+        covins::TypeDefs::KeypointType kp_eigen;
+        kp_eigen[0] = static_cast<float>(window_keypoints[i].pt.x);
+        kp_eigen[1] = static_cast<float>(window_keypoints[i].pt.y);
+
+        msg.keypoints_aors.push_back(aors);
+        msg.keypoints_distorted.push_back(kp_eigen);
+//        msg.keypoints_undistorted.push_back(kp_eigen);
+
+        cv::Mat desc(1,32,CV_8U, reinterpret_cast<uchar*>(&window_brief_descriptors[i]));
+        msg.descriptors.push_back(desc);
+    }
+
+    msg.T_s_c = T_sc;
+    msg.lin_acc = covins::TypeDefs::Vector3Type::Zero();
+    msg.ang_vel = covins::TypeDefs::Vector3Type::Zero();
+
+    msg.velocity(0) = imu_msg.vs[0];
+    msg.velocity(1) = imu_msg.vs[1];
+    msg.velocity(2) = imu_msg.vs[2];
+    msg.bias_accel(0) = imu_msg.bas[0];
+    msg.bias_accel(1) = imu_msg.bas[1];
+    msg.bias_accel(2) = imu_msg.bas[2];
+    msg.bias_gyro(0) = imu_msg.bgs[0];
+    msg.bias_gyro(1) = imu_msg.bgs[1];
+    msg.bias_gyro(2) = imu_msg.bgs[2];
+
+    msg.lin_acc_init(0) = imu_msg.acc0[0];
+    msg.lin_acc_init(1) = imu_msg.acc0[1];
+    msg.lin_acc_init(2) = imu_msg.acc0[2];
+    msg.ang_vel_init(0) = imu_msg.gyr0[0];
+    msg.ang_vel_init(1) = imu_msg.gyr0[1];
+    msg.ang_vel_init(2) = imu_msg.gyr0[2];
+
+    int n_msgs = imu_msg.dt.size();
+//    std::cout << "KF has " << n_msgs << " imu measurements" << std::endl;
+    msg.preintegration.dt.resize(n_msgs);
+    msg.preintegration.lin_acc_x.resize(n_msgs);
+    msg.preintegration.lin_acc_y.resize(n_msgs);
+    msg.preintegration.lin_acc_z.resize(n_msgs);
+    msg.preintegration.ang_vel_x.resize(n_msgs);
+    msg.preintegration.ang_vel_y.resize(n_msgs);
+    msg.preintegration.ang_vel_z.resize(n_msgs);
+    for(int idx=0;idx<n_msgs;++idx) {
+        msg.preintegration.dt[idx]          = imu_msg.dt[idx];
+        msg.preintegration.lin_acc_x[idx]   = imu_msg.lin_acc[idx].x;
+        msg.preintegration.lin_acc_y[idx]   = imu_msg.lin_acc[idx].y;
+        msg.preintegration.lin_acc_z[idx]   = imu_msg.lin_acc[idx].z;
+        msg.preintegration.ang_vel_x[idx]   = imu_msg.ang_vel[idx].x;
+        msg.preintegration.ang_vel_y[idx]   = imu_msg.ang_vel[idx].y;
+        msg.preintegration.ang_vel_z[idx]   = imu_msg.ang_vel[idx].z;
+    }
+
+    msg.img = image;
+
+    covins::TypeDefs::TransformType T_w_sref = covins::TypeDefs::TransformType::Identity();
+    if(kf_ref) {
+        T_w_sref.block<3,3>(0,0) = kf_ref->R_w_i;
+        T_w_sref.block<3,1>(0,3) = kf_ref->T_w_i;
+    }
+
+    if(this->index == 0)
+        msg.id_predecessor = defpair;
+    else {
+        msg.id_predecessor.first = this->index-1;
+        msg.id_predecessor.second = client_id;
+    }
+    msg.id_successor = defpair;
+    if(kf_ref) {
+        msg.id_reference.first = kf_ref->index;
+        msg.id_reference.second = client_id;
+    }
+
+    covins::TypeDefs::TransformType  T_wi = covins::TypeDefs::TransformType::Identity();
+    T_wi.block<3,3>(0,0) = R_w_i;
+    T_wi.block<3,1>(0,3) = T_w_i;
+    msg.T_sref_s = T_w_sref.inverse() * T_wi;
+
+    if(!is_update){
+        for (size_t indx = 0; indx < point_3d.size(); indx++) {
+//            if(indx<10 || indx>100000) {
+//                std::cout << "point_id[" << indx << "]: " << point_id[indx] << " -- pos: " << point_3d[indx] << std::endl;
+//                std::cout << "point_2d_uv[" << indx << "]: " << point_2d_uv[indx] << std::endl;
+//                std::cout << "window_keypoints[" << indx << "]: " << window_keypoints[indx].pt.x << ", " << window_keypoints[indx].pt.y << std::endl;
+//            }
+            msg.landmarks.insert(std::make_pair(indx, std::make_pair((int)point_id[indx],client_id)));
+        }
+    }
+}
+
+void KeyFrame::ConvertToMsg(covins::MsgLandmark &msg, int landmark_idx, KeyFrame *kf_ref, int client_id, bool is_update) {
+    msg.is_update_msg = is_update;
+
+    msg.id.first = (int)point_id[landmark_idx];
+    msg.id.second = client_id;
+
+    if(!kf_ref) {
+        std::cout << "ERROR: " << "LM " << point_3d[landmark_idx] << ": no kf_ref given" << std::endl;
+        exit(-1);
+    }
+
+    msg.id_reference.first = kf_ref->index;
+    msg.id_reference.second = client_id;
+
+    covins::TypeDefs::TransformType T_w_sref = covins::TypeDefs::TransformType::Identity();
+    T_w_sref.block<3,3>(0,0) = kf_ref->R_w_i;
+    T_w_sref.block<3,1>(0,3) = kf_ref->T_w_i;
+    covins::TypeDefs::TransformType T_sref_w = T_w_sref.inverse();
+    covins::TypeDefs::Matrix3Type R_sref_w = T_sref_w.block<3,3>(0,0);
+    covins::TypeDefs::Vector3Type t_sref_w = T_sref_w.block<3,1>(0,3);
+    covins::TypeDefs::Vector3Type pos_w(point_3d[landmark_idx].x,point_3d[landmark_idx].y,point_3d[landmark_idx].z);
+    msg.pos_ref = R_sref_w * pos_w + t_sref_w;
+
+    if(!is_update){
+        msg.observations.insert(std::make_pair(make_pair(kf_ref->index,client_id),landmark_idx));
+    }
+}
+
+void KeyFrame::Geo2Eigen(geometry_msgs::Vector3 &vgeo, Vector3d &veigen) {
+    veigen(0) = vgeo.x;
+    veigen(1) = vgeo.y;
+    veigen(2) = vgeo.z;
+}
+// ------------------
