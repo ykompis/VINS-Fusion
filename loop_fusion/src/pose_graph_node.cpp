@@ -425,8 +425,8 @@ void process()
                 start_flag = 1;
 
                 // CoVINS integration
-//                posegraph.addKeyFrame(keyframe, 1);
-                posegraph.addKeyFrame(keyframe, 0);
+                posegraph.addKeyFrame(keyframe, 1);
+//                posegraph.addKeyFrame(keyframe, 0);
                 // ------------------
 
                 m_process.unlock();
