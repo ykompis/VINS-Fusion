@@ -113,6 +113,8 @@ void readParameters(std::string config_file)
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
 
+    int invert_transforms = fsSettings["invert"];
+
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
@@ -135,6 +137,11 @@ void readParameters(std::string config_file)
         fsSettings["body_T_cam0"] >> cv_T;
         Eigen::Matrix4d T;
         cv::cv2eigen(cv_T, T);
+
+        if(invert_transforms == 1){
+            T = T.inverse().eval();
+        }
+
         RIC.push_back(T.block<3, 3>(0, 0));
         TIC.push_back(T.block<3, 1>(0, 3));
     } 
@@ -170,6 +177,11 @@ void readParameters(std::string config_file)
         fsSettings["body_T_cam1"] >> cv_T;
         Eigen::Matrix4d T;
         cv::cv2eigen(cv_T, T);
+
+        if(invert_transforms == 1){
+            T = T.inverse().eval();
+        }
+
         RIC.push_back(T.block<3, 3>(0, 0));
         TIC.push_back(T.block<3, 1>(0, 3));
     }
