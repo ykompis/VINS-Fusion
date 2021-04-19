@@ -27,11 +27,11 @@ static void reduceVector(vector<Derived> &v, vector<uchar> status)
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, cv::Mat &_image,
 		           vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv, vector<cv::Point2f> &_point_2d_norm,
                    vector<double> &_point_id, int _sequence
-                   // CoVINS integration
+                   // COVINS integration
                    , vins_msgs::preintegration_msg::ConstPtr imu_msg_ptr
                    // ------------------
                    )
-// CoVINS integration
+// COVINS integration
     : imu_msg(*imu_msg_ptr)
 // ------------------
 {
@@ -242,14 +242,14 @@ void KeyFrame::PnPRANSAC(const vector<cv::Point2f> &matched_2d_old_norm,
     cv::Mat inliers;
     TicToc t_pnp_ransac;
 
-    if (CV_MAJOR_VERSION < 3)
+    if (CV_MAJOR_VERSION < 3) {
         solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 100, inliers);
-    else
-    {
-        if (CV_MINOR_VERSION < 2)
+    } else {
+        if (CV_MINOR_VERSION < 2) {
             solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, sqrt(10.0 / 460.0), 0.99, inliers);
-        else
+        } else {
             solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 0.99, inliers);
+        }
 
     }
 
@@ -593,7 +593,7 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 }
 
 
-// CoVINS integration
+// COVINS integration
 void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int client_id, bool is_update) {
     msg.is_update_msg = is_update;
 
