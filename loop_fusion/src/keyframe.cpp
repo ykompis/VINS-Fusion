@@ -11,6 +11,8 @@
 
 #include "keyframe.h"
 
+#include <boost/dynamic_bitset.hpp>
+
 template <typename Derived>
 static void reduceVector(vector<Derived> &v, vector<uchar> status)
 {
@@ -672,9 +674,35 @@ void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int clie
         msg.keypoints_distorted.push_back(kp_eigen);
 //        msg.keypoints_undistorted.push_back(kp_eigen);
 
-        cv::Mat desc(1,32,CV_8U, reinterpret_cast<uchar*>(&window_brief_descriptors[i]));
+        std::vector<boost::dynamic_bitset<>::block_type> v(window_brief_descriptors[i].num_blocks());
+        boost::to_block_range(window_brief_descriptors[i], v.begin());
+
+        cv::Mat desc(1,32,CV_8U, reinterpret_cast<uchar*>(&v[0]), v.size() * sizeof(boost::dynamic_bitset<>::block_type));
+
         msg.descriptors.push_back(desc);
     }
+
+//    for(size_t i=0;i<keypoints.size();++i) {
+//        covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
+//        aors << keypoints[i].angle, static_cast<float>(keypoints[i].octave), keypoints[i].response, keypoints[i].size;
+//
+//        covins::TypeDefs::KeypointType kp_eigen;
+//        kp_eigen[0] = static_cast<float>(keypoints[i].pt.x);
+//        kp_eigen[1] = static_cast<float>(keypoints[i].pt.y);
+//
+//        msg.keypoints_aors.push_back(aors);
+//        msg.keypoints_distorted.push_back(kp_eigen);
+////        msg.keypoints_undistorted.push_back(kp_eigen);
+//
+//        std::vector<boost::dynamic_bitset<>::block_type> v(brief_descriptors[i].num_blocks());
+//        boost::to_block_range(brief_descriptors[i], v.begin());
+//
+//        cv::Mat desc(1,32,CV_8U, reinterpret_cast<uchar*>(&v[0]), v.size() * sizeof(boost::dynamic_bitset<>::block_type));
+//
+//        msg.descriptors.push_back(desc);
+//    }
+
+
 
     msg.T_s_c = T_sc;
     msg.lin_acc = covins::TypeDefs::Vector3Type::Zero();
