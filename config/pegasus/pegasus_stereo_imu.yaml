@@ -8,6 +8,7 @@ imu_topic: "/pegasus/imu0"
 image0_topic: "/pegasus/cam0/image_raw"
 image1_topic: "/pegasus/cam1/image_raw"
 output_path: "/home/yves/Documents/Data/"
+world_frame: "world"
 
 cam0_calib: "23026_cam_0.yaml"
 cam1_calib: "23026_cam_1.yaml"
