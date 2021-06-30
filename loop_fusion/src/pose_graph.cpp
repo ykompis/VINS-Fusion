@@ -55,6 +55,7 @@ void PoseGraph::registerPub(ros::NodeHandle &n)
     pub_pose_graph = n.advertise<visualization_msgs::MarkerArray>("pose_graph", 1000);
     for (int i = 1; i < 10; i++)
         pub_path[i] = n.advertise<nav_msgs::Path>("path_" + to_string(i), 1000);
+    pub_pose = n.advertise<geometry_msgs::PoseStamped>("pose_stamped", 1000);
 }
 
 void PoseGraph::setIMUFlag(bool _use_imu)
@@ -193,6 +194,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     pose_stamped.pose.orientation.w = Q.w();
     path[sequence_cnt].poses.push_back(pose_stamped);
     path[sequence_cnt].header = pose_stamped.header;
+
+    pub_pose.publish(pose_stamped);
 
     if (SAVE_LOOP_PATH)
     {
