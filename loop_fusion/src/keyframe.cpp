@@ -56,8 +56,8 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 	sequence = _sequence;
 	computeWindowBRIEFPoint();
 	computeBRIEFPoint();
-	if(!DEBUG_IMAGE)
-		image.release();
+//	if(!DEBUG_IMAGE)
+//		image.release();
 }
 
 // load previous keyframe
@@ -654,6 +654,7 @@ void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int clie
     msg.keypoints_undistorted.reserve(point_3d.size());
     msg.descriptors.reserve(point_3d.size());
 
+//    std::cout << "KF : " << index << std::endl;
 //    std::cout << "point_id.size(): " << point_id.size() << std::endl;
 //    std::cout << "point_3d.size(): " << point_3d.size() << std::endl;
 //    std::cout << "keypoints.size(): " << keypoints.size() << std::endl;
@@ -661,6 +662,7 @@ void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int clie
 //    std::cout << "brief_descriptors.size(): " << brief_descriptors.size() << std::endl;
 //    std::cout << "window_keypoints.size(): " << window_keypoints.size() << std::endl;
 //    std::cout << "window_brief_descriptors.size(): " << window_brief_descriptors.size() << std::endl;
+//    std::cout << "==========================================" << std::endl;
 
     for(size_t i=0;i<window_keypoints.size();++i) {
         covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
@@ -769,13 +771,15 @@ void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int clie
     T_wi.block<3,1>(0,3) = T_w_i;
     msg.T_sref_s = T_w_sref.inverse() * T_wi;
 
-    if(!is_update){
-        for (size_t indx = 0; indx < point_3d.size(); indx++) {
+    msg.points_3d.reserve(point_3d.size());
+    for (size_t indx = 0; indx < point_3d.size(); indx++) {
 //            if(indx<10 || indx>100000) {
 //                std::cout << "point_id[" << indx << "]: " << point_id[indx] << " -- pos: " << point_3d[indx] << std::endl;
 //                std::cout << "point_2d_uv[" << indx << "]: " << point_2d_uv[indx] << std::endl;
 //                std::cout << "window_keypoints[" << indx << "]: " << window_keypoints[indx].pt.x << ", " << window_keypoints[indx].pt.y << std::endl;
 //            }
+        msg.points_3d.push_back(Eigen::Vector3d(point_3d[indx].x, point_3d[indx].y, point_3d[indx].z));
+        if(!is_update) {
             msg.landmarks.insert(std::make_pair(indx, std::make_pair((int)point_id[indx],client_id)));
         }
     }
@@ -803,6 +807,7 @@ void KeyFrame::ConvertToMsg(covins::MsgLandmark &msg, int landmark_idx, KeyFrame
     covins::TypeDefs::Vector3Type t_sref_w = T_sref_w.block<3,1>(0,3);
     covins::TypeDefs::Vector3Type pos_w(point_3d[landmark_idx].x,point_3d[landmark_idx].y,point_3d[landmark_idx].z);
     msg.pos_ref = R_sref_w * pos_w + t_sref_w;
+//    msg.pos_ref = pos_w;
 
     if(!is_update){
         msg.observations.insert(std::make_pair(make_pair(kf_ref->index,client_id),landmark_idx));
