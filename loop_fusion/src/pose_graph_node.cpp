@@ -392,8 +392,15 @@ void process()
                 vector<cv::Point2f> point_2d_normal;
                 vector<double> point_id;
 
+                const int margin = 15;
                 for (unsigned int i = 0; i < point_msg->points.size(); i++)
                 {
+
+                    if ( point_msg->channels[i].values[2] < margin ||  point_msg->channels[i].values[3] < margin ||
+                         point_msg->channels[i].values[2] > 752-margin ||  point_msg->channels[i].values[3] > 480-margin) {
+                        continue;
+                    }
+
                     cv::Point3f p_3d;
                     p_3d.x = point_msg->points[i].x;
                     p_3d.y = point_msg->points[i].y;
@@ -425,8 +432,8 @@ void process()
                 start_flag = 1;
 
                 // CoVINS integration
-                posegraph.addKeyFrame(keyframe, 1);
-//                posegraph.addKeyFrame(keyframe, 0);
+//                posegraph.addKeyFrame(keyframe, 1);
+                posegraph.addKeyFrame(keyframe, 0);
                 // ------------------
 
                 m_process.unlock();

@@ -260,6 +260,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     cur_kf->ConvertToMsg(msg_kf,last_kf_,client_id_,false);
     map_chunk.keyframes.push_back(msg_kf);
     for(int idx=0;idx<cur_kf->point_3d.size();++idx) {
+        if (cur_kf->point_id[idx] == -1.)
+            continue;
         covins::MsgLandmark msg_lm;
         cur_kf->ConvertToMsg(msg_lm,idx,cur_kf,client_id_,false);
         map_chunk.landmarks.push_back(msg_lm);
