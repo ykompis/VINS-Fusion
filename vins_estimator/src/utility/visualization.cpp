@@ -71,6 +71,7 @@ void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, co
     nav_msgs::Odometry odometry;
     odometry.header.stamp = ros::Time(t);
     odometry.header.frame_id = WORLD_FRAME;
+    odometry.child_frame_id = CHILD_FRAME;
     odometry.pose.pose.position.x = P.x();
     odometry.pose.pose.position.y = P.y();
     odometry.pose.pose.position.z = P.z();
@@ -144,7 +145,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         nav_msgs::Odometry odometry;
         odometry.header = header;
         odometry.header.frame_id = WORLD_FRAME;
-        odometry.child_frame_id = WORLD_FRAME;
+        odometry.child_frame_id = CHILD_FRAME;
         Quaterniond tmp_Q;
         tmp_Q = Quaterniond(estimator.Rs[WINDOW_SIZE]);
         odometry.pose.pose.position.x = estimator.Ps[WINDOW_SIZE].x();
@@ -154,9 +155,13 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         odometry.pose.pose.orientation.y = tmp_Q.y();
         odometry.pose.pose.orientation.z = tmp_Q.z();
         odometry.pose.pose.orientation.w = tmp_Q.w();
-        odometry.twist.twist.linear.x = estimator.Vs[WINDOW_SIZE].x();
-        odometry.twist.twist.linear.y = estimator.Vs[WINDOW_SIZE].y();
-        odometry.twist.twist.linear.z = estimator.Vs[WINDOW_SIZE].z();
+
+        Vector3d linear_twist_child_frame = tmp_Q.inverse() * estimator.Vs[WINDOW_SIZE];
+
+        odometry.twist.twist.linear.x = linear_twist_child_frame.x();
+        odometry.twist.twist.linear.y = linear_twist_child_frame.y();
+        odometry.twist.twist.linear.z = linear_twist_child_frame.z();
+
         pub_odometry.publish(odometry);
 
         geometry_msgs::PoseStamped pose_stamped;
@@ -342,7 +347,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     q.setY(correct_q.y());
     q.setZ(correct_q.z());
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, header.stamp, WORLD_FRAME, "body"));
+    br.sendTransform(tf::StampedTransform(transform, header.stamp, WORLD_FRAME, CHILD_FRAME));
 
     // camera frame
     transform.setOrigin(tf::Vector3(estimator.tic[0].x(),
@@ -353,7 +358,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     q.setY(Quaterniond(estimator.ric[0]).y());
     q.setZ(Quaterniond(estimator.ric[0]).z());
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, header.stamp, "body", "camera"));
+    br.sendTransform(tf::StampedTransform(transform, header.stamp, CHILD_FRAME, "camera"));
 
 
     nav_msgs::Odometry odometry;
