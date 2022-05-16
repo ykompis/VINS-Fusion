@@ -31,6 +31,8 @@ std::string VINS_RESULT_PATH;
 std::string OUTPUT_FOLDER;
 std::string IMU_TOPIC;
 std::string WORLD_FRAME;
+std::string BODY_FRAME;
+std::string CAM_NAME;
 int ROW, COL;
 double TD;
 int NUM_OF_CAM;
@@ -91,6 +93,8 @@ void readParameters(std::string config_file)
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
     fsSettings["world_frame"] >> WORLD_FRAME;
+    fsSettings["body_frame"] >> BODY_FRAME;
+    fsSettings["cam_name"] >> CAM_NAME;
 
     USE_IMU = fsSettings["imu"];
     printf("USE_IMU: %d\n", USE_IMU);

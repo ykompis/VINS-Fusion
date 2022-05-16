@@ -45,6 +45,8 @@ extern std::string VINS_RESULT_PATH;
 extern std::string OUTPUT_FOLDER;
 extern std::string IMU_TOPIC;
 extern std::string WORLD_FRAME;
+extern std::string BODY_FRAME;
+extern std::string CAM_NAME;
 extern double TD;
 extern int ESTIMATE_TD;
 extern int ROLLING_SHUTTER;
