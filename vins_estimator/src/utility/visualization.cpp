@@ -23,7 +23,7 @@ ros::Publisher pub_keyframe_pose;
 ros::Publisher pub_keyframe_point;
 ros::Publisher pub_extrinsic;
 
-ros::Publisher pub_image_track;
+image_transport::Publisher pub_image_track;
 
 CameraPoseVisualization cameraposevisual(1, 0, 0, 1);
 static double sum_of_path = 0;
@@ -45,7 +45,9 @@ void registerPub(ros::NodeHandle &n)
     pub_keyframe_pose = n.advertise<nav_msgs::Odometry>("keyframe_pose", 1000);
     pub_keyframe_point = n.advertise<sensor_msgs::PointCloud>("keyframe_point", 1000);
     pub_extrinsic = n.advertise<nav_msgs::Odometry>("extrinsic", 1000);
-    pub_image_track = n.advertise<sensor_msgs::Image>("image_track", 1000);
+    
+    image_transport::ImageTransport it(n);
+    pub_image_track = it.advertise("image_track", 1);
 
     cameraposevisual.setScale(0.1);
     cameraposevisual.setLineWidth(0.01);
